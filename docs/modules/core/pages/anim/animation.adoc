@@ -1,46 +1,134 @@
-= Stub page for the new animation system
+= The New Animation System
 :author: mitm001
+:author: pavl_g
 :revnumber: 1.0
 
-This page will be used to explain the new animation system. Feel free to edit as needed.
+This page explains how to use jme3 new animation system, by building composers, anim tracks & clips from scratch in java code & eventually converting those clips into runnable actions, those actions could be ran with different sequences & styles.
 
 == Requirements
-
+:author: pavl_g
+. Jme3-Core dependency.
+. 3D-Model.
+. An instance of ```HasLocalTransform```.
 
 == Code Samples
+=> TestSpatialAnim:
+https://github.com/jMonkeyEngine/jmonkeyengine/blob/master/jme3-examples/src/main/java/jme3test/model/anim/TestSpatialAnim.java
+
+=>
+
+== Composing Animations
+:author: pavl_g
+Composing & creating animations can be managed
+primarily through the ```AnimComposer``` class,
+that would hold everything starting from animation
+clips (```AnimClip```) moving through
+transformation tracks (```TransfromTracks```) &
+keyFrames to runnable clip actions (```ClipAction```) on different animation layers (```Layers```).
+
+=== AnimComposer Control
+*AnimComposer* control class is a base holder class that
+would hold model animation transform tracks inside animation
+clips that are convertible to runnable actions.
+
+[NOTE]
+====
+=> Transfrom tracks can include a set of :
+
+. *Translations*
+. *Scales*
+. *Rotations*
+
+=> Animation Clips can be constructed using ```AnimClip``` class, which creates an
+enclosure clip for array/s of transfrom track/s that is/are playable.
+
+=> To run the animation clips you should enclose them inside a blendable action using the ```ClipAction``` class.
+
+=> Clip Actions are played inside animation layers,
+an animation layer is an abstraction concept of a space in which Clip Actions can run within.
+
+=> The class which manages animation layer is the ```AnimComposer``` class.
+
+====
+
+===== Steps :
+. Create an instance of a class from the ```HasLocalTransform``` class hierarchy
+& here's a list of the available things to animate :
+(```Node```, ```Spatial```, ```Geometry```
+  , ```ParticleEmitter```, ```AudioNode```, ```Joint```), however we are going to use ```Spatial``` in this tutorial for simplicity.
+
+. Create an instance of ```AnimComposer```.
+
+[java]
+```java
+      //create a spatial from a model
+      Spatial model = assetManager.loadModel("AssetsForRenderer/Models/DatabaseAnimCombinedArmature.gltf");
+      // create an animComposer to compose spatial animation
+      AnimComposer animComposer = new AnimComposer();
+      //add the control to the model
+      model.addControl(animComposer);
+      //attach the model to the scene
+      rootNode.attachChild(model);
+```
+
+=== TransformTracks & Keyframes
+:author: pavl_g
+
+*KeyFrames* are sets of transformation matrices including *translations*, *scales*, *rotations* that is enclosed inside a ```TransformTrack``` instance, then applied to a target of type ```HasLocalTransfrom```, such as : Spaital, Node, Particles,...etc.
+
+*TransformTrack* is a wrapper class that wraps the keyframes in the form of arrays & apply those tracks to a model, to be used by animation clips, provided that each keyframe has a delay time & keyframes inside the same ```TransformTrack``` runs in a series sequence (Synchronously), starting from frame 0 up-to frame n (times.length-1) or the last indexed frame.
 
 
-== Controlling Animations
 
+===== Steps :
+Create an instance of ```TransformTrack``` class & pass its parameters as follows:
 
-=== The Animation Control
+. the proposed target or model which want to apply the future tracks to, the model can be an instance of
+HasLocalTransform class hierarchy.
 
+. the keyframes delay times in an array format.
 
-=== Animation Channels
+. the proposed translation tracks in an array format of the same length as the frame times delay array.
 
+. the proposed scales tracks in an array format of the same length as the frame times delay array.
 
-=== Skeleton Control
+. the proposed rotations tracks in an array format of the same length as the frame times delay array.
 
+[NOTE]
+====
+=> There are 3 types of keyframes :
 
-== Animation Control Properties
+. Translation keyframes.
+. Scale keyframes.
+. Rotational keyframes.
 
+=> Each corresponding frame of index (n) inside the translation
+keyframes runs in-parallel with that of the scale & rotational keyframes, and in-series with the proceeding frame (n+1).
 
-== Skeleton Control Properties
+=> Keyframes time delays must be in a pattern from, ie : delay time of the next frame > delay time of the previous delay by a time factor, or you may get an abnormal behavior of some frames or some frames may even skipped
 
+=> Keyframes time delays array must be of the same length as the keyframes array, each frame has its corresponding time delay.
 
-== Animation Channel Properties
+=> The total time for the transform track is calculated automatically once you have defined & adjusted the keyframes delay times, use ```transformTrack.getLength()``` to access it.
 
+=> You can late initialize the parameters of the ```TransformTrack``` instance, through initializing them as ```null``` initially &
+using the corresponding setters methods later in your code.
 
-== Playing Animations
+====
+[java]
+```java
+        // a transform track instance
+        final TransformTrack transformTrack = new TransformTrack(null, null, null, null);
+        //set the bone or the spatial of type HasLocalTransform
+        transformTrack.setTarget(model);
+        // notice it must be in a pattern form, new tracks are delayed by a timefactor of n+5 where n the previous frame.
+        transformTrack.setTimes(new float[]{5,10,15,20,});
+        //Scale down keyFrames with the same length as the times delay
+        transformTrack.setKeyframesScale(new Vector3f[]{
+                new Vector3f(model.getLocalScale().clone().divide(1.2f)),
+                new Vector3f(model.getLocalScale().clone().divide(3f)),
+                new Vector3f(model.getLocalScale().clone().divide(4f)),
+                new Vector3f(model.getLocalScale().clone().divide(5f)),
+        });
 
-
-=== Usage Example
-
-
-== Animation Event Listener
-
-
-=== Responding to Animation End
-
-
-=== Responding to Animation Start
+```
